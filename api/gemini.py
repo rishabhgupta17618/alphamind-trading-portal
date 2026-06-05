@@ -1,6 +1,7 @@
 """
 Gemini AI Proxy — Vercel Serverless Function
-Primary: gemini-2.0-flash → fallback chain on rate-limit or deprecation errors.
+Uses v1beta endpoint (stable, supports all current models).
+Falls back through model list on 429/503/404.
 """
 
 import json
@@ -10,21 +11,23 @@ import urllib.error
 from http.server import BaseHTTPRequestHandler
 
 GEMINI_KEY  = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_BASE = "https://generativelanguage.googleapis.com/v1/models"
+GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
+# Models available on free tier (Flash family) + paid fallbacks
 MODELS = [
     "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
     "gemini-1.5-flash",
     "gemini-1.5-flash-8b",
+    "gemini-2.0-flash-lite",
 ]
 
 RETRY_CODES = {404, 429, 503}
 
 
-def call_gemini(api_key: str, prompt: str, max_tokens: int, model_idx: int = 0):
+def call_gemini(api_key: str, prompt: str, max_tokens: int, model_idx: int = 0, last_error: str = ""):
     if model_idx >= len(MODELS):
-        return 429, {"error": "All Gemini models rate limited or unavailable. Please wait a minute and try again."}
+        msg = f"All Gemini models failed. Last error: {last_error}" if last_error else "All Gemini models unavailable."
+        return 429, {"error": msg}
 
     model = MODELS[model_idx]
     url   = f"{GEMINI_BASE}/{model}:generateContent?key={api_key}"
@@ -34,7 +37,6 @@ def call_gemini(api_key: str, prompt: str, max_tokens: int, model_idx: int = 0):
         "generationConfig": {
             "maxOutputTokens": max_tokens,
             "temperature":     0.3,
-            # responseMimeType removed — not supported on v1 endpoint
         }
     }).encode()
 
@@ -59,13 +61,17 @@ def call_gemini(api_key: str, prompt: str, max_tokens: int, model_idx: int = 0):
 
     except urllib.error.HTTPError as e:
         err_body = e.read().decode()
-        if e.code in RETRY_CODES:
-            return call_gemini(api_key, prompt, max_tokens, model_idx + 1)
         try:
-            err_data = json.loads(err_body)
-            return e.code, {"error": err_data.get("error", {}).get("message", err_body[:300])}
+            err_msg = json.loads(err_body).get("error", {}).get("message", err_body[:200])
         except Exception:
-            return e.code, {"error": err_body[:300]}
+            err_msg = err_body[:200]
+
+        if e.code in RETRY_CODES:
+            return call_gemini(api_key, prompt, max_tokens, model_idx + 1, err_msg)
+
+        # Non-retryable error (e.g. 400 bad key, 403 permission denied) — surface immediately
+        return e.code, {"error": err_msg}
+
     except Exception as e:
         return 500, {"error": str(e)}
 
