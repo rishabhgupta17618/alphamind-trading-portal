@@ -12,7 +12,6 @@ from http.server import BaseHTTPRequestHandler
 GEMINI_KEY  = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1/models"
 
-# Only models confirmed available on the stable v1 endpoint (no deprecated 1.5-pro)
 MODELS = [
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
@@ -20,7 +19,6 @@ MODELS = [
     "gemini-1.5-flash-8b",
 ]
 
-# Retry on these HTTP status codes (404 = deprecated/removed model, 429/503 = rate limit)
 RETRY_CODES = {404, 429, 503}
 
 
@@ -34,9 +32,9 @@ def call_gemini(api_key: str, prompt: str, max_tokens: int, model_idx: int = 0):
     payload = json.dumps({
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
-            "maxOutputTokens":  max_tokens,
-            "temperature":      0.3,
-            "responseMimeType": "application/json",
+            "maxOutputTokens": max_tokens,
+            "temperature":     0.3,
+            # responseMimeType removed — not supported on v1 endpoint
         }
     }).encode()
 
