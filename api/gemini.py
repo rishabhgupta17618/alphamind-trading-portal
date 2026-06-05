@@ -1,7 +1,6 @@
 """
 Gemini AI Proxy — Vercel Serverless Function
-Uses gemini-2.0-flash as primary (Google AI Pro account — paid tier limits apply).
-Falls back to gemini-1.5-pro and gemini-1.5-flash on 429.
+Primary: gemini-2.0-flash → fallback chain on rate-limit or deprecation errors.
 """
 
 import json
@@ -11,20 +10,23 @@ import urllib.error
 from http.server import BaseHTTPRequestHandler
 
 GEMINI_KEY  = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+GEMINI_BASE = "https://generativelanguage.googleapis.com/v1/models"
 
-# Primary = gemini-2.0-flash (works with Google AI Pro paid tier)
+# Only models confirmed available on the stable v1 endpoint (no deprecated 1.5-pro)
 MODELS = [
     "gemini-2.0-flash",
-    "gemini-1.5-pro",
+    "gemini-2.0-flash-lite",
     "gemini-1.5-flash",
     "gemini-1.5-flash-8b",
 ]
 
+# Retry on these HTTP status codes (404 = deprecated/removed model, 429/503 = rate limit)
+RETRY_CODES = {404, 429, 503}
+
 
 def call_gemini(api_key: str, prompt: str, max_tokens: int, model_idx: int = 0):
     if model_idx >= len(MODELS):
-        return 429, {"error": "All Gemini models rate limited. Please wait a minute and try again."}
+        return 429, {"error": "All Gemini models rate limited or unavailable. Please wait a minute and try again."}
 
     model = MODELS[model_idx]
     url   = f"{GEMINI_BASE}/{model}:generateContent?key={api_key}"
@@ -59,8 +61,7 @@ def call_gemini(api_key: str, prompt: str, max_tokens: int, model_idx: int = 0):
 
     except urllib.error.HTTPError as e:
         err_body = e.read().decode()
-        if e.code in (429, 503):
-            # Try next model automatically
+        if e.code in RETRY_CODES:
             return call_gemini(api_key, prompt, max_tokens, model_idx + 1)
         try:
             err_data = json.loads(err_body)
