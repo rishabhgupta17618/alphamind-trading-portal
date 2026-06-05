@@ -1,7 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/api/dhan",   "destination": "/api/dhan.py"  },
-    { "source": "/api/groq",   "destination": "/api/groq.py"  },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ]
-}
