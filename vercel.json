@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/api/dhan",   "destination": "/api/dhan.py"   },
-    { "source": "/api/gemini", "destination": "/api/gemini.py" },
-    { "source": "/api/otp",    "destination": "/api/otp.py"    },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ]
-}
