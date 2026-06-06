@@ -114,10 +114,11 @@ function OverviewTab({ trades, onClose, onDelete }) {
         {open.length === 0
           ? <div style={{color:'var(--text3)',fontSize:12}}>No open trades. Add trades from AI Signals or Market Analysis.</div>
           : <div style={{overflowX:'auto'}}><table>
-              <thead><tr><th>Symbol</th><th>Dir</th><th>Entry</th><th>SL</th><th>T1</th><th>Qty</th><th>Capital Used</th><th>Max Risk</th><th>Style</th><th>Source</th><th>Exit</th><th>Delete</th></tr></thead>
+              <thead><tr><th>Symbol</th><th>Dir</th><th>Entry</th><th>SL</th><th>T1</th><th>Qty</th><th>Capital Used</th><th>Max Risk</th><th>Max Profit</th><th>Style</th><th>Source</th><th>Exit</th><th>Delete</th></tr></thead>
               <tbody>{open.map(t=>{
                 const capital = Math.round((parseFloat(t.entry)||0)*(parseInt(t.qty)||0))
                 const risk    = Math.round(Math.abs((parseFloat(t.entry)||0)-(parseFloat(t.sl)||0))*(parseInt(t.qty)||0))
+                const profit  = Math.round(Math.abs((parseFloat(t.t1)||0)-(parseFloat(t.entry)||0))*(parseInt(t.qty)||0))
                 return (
                   <tr key={t.id}>
                     <td><b>{t.sym}</b></td>
@@ -126,6 +127,7 @@ function OverviewTab({ trades, onClose, onDelete }) {
                     <td>{t.qty}</td>
                     <td style={{color:'var(--amber)',fontWeight:500}}>{'₹'}{capital.toLocaleString('en-IN')}</td>
                     <td className="dn">{'₹'}{risk.toLocaleString('en-IN')}</td>
+                    <td className="up">{'₹'}{profit.toLocaleString('en-IN')}</td>
                     <td><span className={`bdg b-${t.style==='fno'?'fno':'paper'}`} style={{fontSize:10}}>{t.style}</span></td>
                     <td><span style={{fontSize:10,color:'var(--text3)'}}>{t.source||'manual'}</span></td>
                     <td style={{display:'flex',gap:4}}>
