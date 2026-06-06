@@ -163,9 +163,6 @@ export default function App() {
   useEffect(() => { lsSet(KEYS.TRADES, trades) }, [trades])
   useEffect(() => { lsSet(KEYS.JOURNAL, journal) }, [journal])
 
-  // Point 3: Auto-exit paper trades at T1 or SL
-  useAutoExit(trades, closeTrade)
-
   // Point 4: Cloud sync — persist trades across devices via JSONBin
   const syncRef = useRef(null)
   useEffect(() => {
@@ -249,6 +246,9 @@ export default function App() {
       return closed
     }))
   }, [])
+
+  // Point 3: Auto-exit paper trades at T1 or SL (must be after closeTrade is defined)
+  useAutoExit(trades, closeTrade)
 
   const addJournal = useCallback((entry) => {
     setJournal(prev => [{ id: 'J' + Date.now().toString(36), ts: new Date().toISOString(), ...entry }, ...prev])
