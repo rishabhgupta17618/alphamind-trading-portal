@@ -113,34 +113,49 @@ function OverviewTab({ trades, onClose, onDelete }) {
         </div>
         {open.length === 0
           ? <div style={{color:'var(--text3)',fontSize:12}}>No open trades. Add trades from AI Signals or Market Analysis.</div>
-          : <div style={{overflowX:'auto'}}><table>
-              <thead><tr><th>Symbol</th><th>Dir</th><th>Entry</th><th>SL</th><th>T1</th><th>Qty</th><th>Capital Used</th><th>Max Risk</th><th>Max Profit</th><th>Style</th><th>Source</th><th>Exit</th><th>Delete</th></tr></thead>
+          : <div style={{overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
+              <table style={{fontSize:12,minWidth:900}}>
+              <thead><tr>
+                <th style={{minWidth:80}}>Symbol</th>
+                <th style={{minWidth:55}}>Dir</th>
+                <th style={{minWidth:70}}>Entry</th>
+                <th style={{minWidth:70}}>SL</th>
+                <th style={{minWidth:70}}>T1</th>
+                <th style={{minWidth:40}}>Qty</th>
+                <th style={{minWidth:100,color:'var(--amber)'}}>Capital Used</th>
+                <th style={{minWidth:90,color:'var(--red)'}}>Max Risk</th>
+                <th style={{minWidth:100,color:'var(--green)'}}>Max Profit</th>
+                <th style={{minWidth:70}}>Style</th>
+                <th style={{minWidth:60}}>Exit</th>
+                <th style={{minWidth:70}}>Delete</th>
+              </tr></thead>
               <tbody>{open.map(t=>{
                 const capital = Math.round((parseFloat(t.entry)||0)*(parseInt(t.qty)||0))
                 const risk    = Math.round(Math.abs((parseFloat(t.entry)||0)-(parseFloat(t.sl)||0))*(parseInt(t.qty)||0))
                 const profit  = Math.round(Math.abs((parseFloat(t.t1)||0)-(parseFloat(t.entry)||0))*(parseInt(t.qty)||0))
                 return (
                   <tr key={t.id}>
-                    <td><b>{t.sym}</b></td>
-                    <td><span className={`bdg b-${t.dir==='LONG'?'buy':'sell'}`}>{t.dir}</span></td>
-                    <td>{'₹'}{t.entry}</td><td className="dn">{'₹'}{t.sl}</td><td className="up">{'₹'}{t.t1}</td>
-                    <td>{t.qty}</td>
-                    <td style={{color:'var(--amber)',fontWeight:500}}>{'₹'}{capital.toLocaleString('en-IN')}</td>
-                    <td className="dn">{'₹'}{risk.toLocaleString('en-IN')}</td>
-                    <td className="up">{'₹'}{profit.toLocaleString('en-IN')}</td>
-                    <td><span className={`bdg b-${t.style==='fno'?'fno':'paper'}`} style={{fontSize:10}}>{t.style}</span></td>
-                    <td><span style={{fontSize:10,color:'var(--text3)'}}>{t.source||'manual'}</span></td>
-                    <td style={{display:'flex',gap:4}}>
-                      <button className="btn btn-sm" style={{fontSize:10}} onClick={()=>{
+                    <td><b style={{fontSize:12}}>{t.sym}</b><div style={{fontSize:9,color:'var(--text3)'}}>{t.source||'manual'}</div></td>
+                    <td><span className={`bdg b-${t.dir==='LONG'?'buy':'sell'}`} style={{fontSize:10}}>{t.dir}</span></td>
+                    <td style={{fontSize:11}}>{'₹'}{t.entry}</td>
+                    <td className="dn" style={{fontSize:11}}>{'₹'}{t.sl}</td>
+                    <td className="up" style={{fontSize:11}}>{'₹'}{t.t1}</td>
+                    <td style={{fontSize:11}}>{t.qty}</td>
+                    <td style={{color:'var(--amber)',fontWeight:600,fontSize:11}}>{'₹'}{capital.toLocaleString('en-IN')}</td>
+                    <td className="dn" style={{fontWeight:600,fontSize:11}}>{'₹'}{risk.toLocaleString('en-IN')}</td>
+                    <td className="up" style={{fontWeight:600,fontSize:11}}>{'₹'}{profit.toLocaleString('en-IN')}</td>
+                    <td><span className={`bdg b-${t.style==='fno'?'fno':'paper'}`} style={{fontSize:9}}>{t.style}</span></td>
+                    <td>
+                      <button className="btn btn-sm" style={{fontSize:10,padding:'3px 8px'}} onClick={()=>{
                         const ep = prompt(`Manual exit price for ${t.sym}:`)
                         if(ep && !isNaN(ep)) onClose(t.id, parseFloat(ep))
                       }}>Exit</button>
                     </td>
                     <td>
                       <button className="btn btn-sm"
-                        style={{fontSize:10,background:confirmDel===t.id?'var(--rb)':'transparent',color:confirmDel===t.id?'var(--red)':'var(--text3)',border:confirmDel===t.id?'1px solid var(--red)':'' }}
+                        style={{fontSize:10,padding:'3px 8px',background:confirmDel===t.id?'var(--rb)':'transparent',color:confirmDel===t.id?'var(--red)':'var(--text3)',border:confirmDel===t.id?'1px solid var(--red)':''}}
                         onClick={()=>handleDelete(t.id)}>
-                        {confirmDel===t.id?'⚠ Confirm?':' 🗑'}
+                        {confirmDel===t.id?'⚠ Confirm?':'🗑 Del'}
                       </button>
                     </td>
                   </tr>
