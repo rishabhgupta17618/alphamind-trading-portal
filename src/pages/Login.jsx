@@ -132,10 +132,6 @@ export default function Login({ onLogin }) {
     onLogin(creds)
   }
 
-  const resetPin = () => {
-    localStorage.removeItem(PIN_KEY)
-    setStep('setpin'); setPin(''); setPin2(''); setErr('')
-  }
 
   // ── LOCKED ───────────────────────────────────────────────────
   if (step === 'locked') return (
@@ -239,16 +235,10 @@ export default function Login({ onLogin }) {
           onClick={handleVerifyPin} disabled={pin.length !== 4}>
           <i className="ti ti-shield-check" /> Unlock
         </button>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-sm" style={{ flex: 1, justifyContent: 'center' }}
-            onClick={() => { setStep('creds'); setPin(''); setErr('') }}>
-            <i className="ti ti-arrow-left" /> Change Credentials
-          </button>
-          <button className="btn btn-sm" style={{ flex: 1, justifyContent: 'center' }}
-            onClick={resetPin}>
-            <i className="ti ti-refresh" /> Reset PIN
-          </button>
-        </div>
+        <button className="btn btn-sm" style={{ width: '100%', justifyContent: 'center' }}
+          onClick={() => { setStep('creds'); setPin(''); setErr('') }}>
+          <i className="ti ti-arrow-left" /> Change Credentials
+        </button>
       </div>
     </div>
   )
