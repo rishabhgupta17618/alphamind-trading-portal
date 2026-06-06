@@ -233,11 +233,11 @@ export default function App() {
     }, ...prev])
   }, [])
 
-  const closeTrade = useCallback((id, exitP, autoExit = false) => {
+  const closeTrade = useCallback((id, exitP, autoExit = false, exitNote = '') => {
     setTrades(prev => prev.map(t => {
       if (t.id !== id || t.status !== 'OPEN') return t
       const pnl    = t.dir === 'LONG' ? (exitP - t.entry) * t.qty : (t.entry - exitP) * t.qty
-      const closed = { ...t, status: 'CLOSED', exitP, pnl: Math.round(pnl * 100) / 100, result: pnl > 0 ? 'WIN' : 'LOSS', closedAt: new Date().toISOString(), autoExit }
+      const closed = { ...t, status: 'CLOSED', exitP, pnl: Math.round(pnl * 100) / 100, result: pnl > 0 ? 'WIN' : 'LOSS', closedAt: new Date().toISOString(), autoExit, exitNote }
       setJournal(prev => [{
         id: 'J' + Date.now().toString(36), ts: new Date().toISOString(),
         type: pnl > 0 ? 'win' : 'loss', sym: t.sym, pnl: closed.pnl,
@@ -245,6 +245,10 @@ export default function App() {
       }, ...prev])
       return closed
     }))
+  }, [])
+
+  const deleteTrade = useCallback((id) => {
+    setTrades(prev => prev.filter(t => t.id !== id))
   }, [])
 
   // Point 3: Auto-exit paper trades at T1 or SL (must be after closeTrade is defined)
@@ -330,7 +334,7 @@ export default function App() {
           {page==='dashboard' && <Dashboard creds={creds} trades={trades} funds={funds} setFunds={setFunds} setHoldings={setHoldings} setPositions={setPositions} onNavigate={setPage}/>}
           {page==='market'    && <MarketAnalysis creds={creds} onAddTrade={t=>{openTrade(t);setPage('paper')}}/>}
           {page==='signals'   && <AISignals creds={creds} trades={trades} onAddTrade={openTrade}/>}
-          {page==='paper'     && <PaperTrades creds={creds} trades={trades} onOpen={openTrade} onClose={closeTrade}/>}
+          {page==='paper'     && <PaperTrades creds={creds} trades={trades} onOpen={openTrade} onClose={closeTrade} onDelete={deleteTrade}/>}
           {page==='live'      && <LiveTrading creds={creds} riskConfig={riskConfig} setRiskConfig={setRiskConfig} onAddTrade={openTrade} funds={funds}/>}
           {page==='portfolio' && <Portfolio creds={creds} holdings={holdings} positions={positions} funds={funds} setHoldings={setHoldings} setPositions={setPositions} setFunds={setFunds}/>}
           {page==='journal'   && <Journal creds={creds} journal={journal} trades={trades} onAdd={addJournal}/>}
