@@ -50,85 +50,144 @@ function RRCalc({ entry, sl, t1, qty }) {
   )
 }
 
-function OverviewTab({ trades, onClose }) {
-  const closed = trades.filter(t=>t.status==='CLOSED')
-  const open   = trades.filter(t=>t.status==='OPEN')
-  const wins   = closed.filter(t=>t.result==='WIN')
-  const losses = closed.filter(t=>t.result==='LOSS')
-  const tp     = closed.reduce((s,t)=>s+(t.pnl||0),0)
-  const wp     = wins.reduce((s,t)=>s+(t.pnl||0),0)
-  const lp     = Math.abs(losses.reduce((s,t)=>s+(t.pnl||0),0))
-  const wr     = closed.length?Math.round(wins.length/closed.length*100):0
-  const pf     = lp>0?(wp/lp).toFixed(2):wins.length>0?'∞':'0'
-  const aw     = wins.length?Math.round(wp/wins.length):0
-  const al     = losses.length?Math.round(lp/losses.length):0
+function OverviewTab({ trades, onClose, onDelete }) {
+  const closed   = trades.filter(t=>t.status==='CLOSED')
+  const open     = trades.filter(t=>t.status==='OPEN')
+  const wins     = closed.filter(t=>t.result==='WIN')
+  const losses   = closed.filter(t=>t.result==='LOSS')
+  const tp       = closed.reduce((s,t)=>s+(t.pnl||0),0)
+  const wp       = wins.reduce((s,t)=>s+(t.pnl||0),0)
+  const lp       = Math.abs(losses.reduce((s,t)=>s+(t.pnl||0),0))
+  const wr       = closed.length?Math.round(wins.length/closed.length*100):0
+  const pf       = lp>0?(wp/lp).toFixed(2):wins.length>0?'∞':'0'
+  const aw       = wins.length?Math.round(wp/wins.length):0
+  const al       = losses.length?Math.round(lp/losses.length):0
+
+  const capitalOpen  = open.reduce((s,t)=>s+(parseFloat(t.entry)||0)*(parseInt(t.qty)||0),0)
+  const capitalTotal = trades.reduce((s,t)=>s+(parseFloat(t.entry)||0)*(parseInt(t.qty)||0),0)
+  const riskOpen     = open.reduce((s,t)=>s+Math.abs((parseFloat(t.entry)||0)-(parseFloat(t.sl)||0))*(parseInt(t.qty)||0),0)
+
+  const [confirmDel, setConfirmDel] = React.useState(null)
+  const handleDelete = (id) => {
+    if (confirmDel === id) { onDelete(id); setConfirmDel(null) }
+    else { setConfirmDel(id); setTimeout(()=>setConfirmDel(c=>c===id?null:c), 3000) }
+  }
 
   return (
     <>
-      <div className="g4" style={{marginBottom:14}}>
-        <div className="met"><div className="ml">Total P&L</div><div className={`mv ${tp>=0?'up':'dn'}`}>{tp>=0?'+':''}₹{Math.abs(Math.round(tp)).toLocaleString('en-IN')}</div></div>
+      <div className="g4" style={{marginBottom:8}}>
+        <div className="met"><div className="ml">Total P&L</div><div className={`mv ${tp>=0?'up':'dn'}`}>{tp>=0?'+':''}{'₹'}{Math.abs(Math.round(tp)).toLocaleString('en-IN')}</div></div>
         <div className="met"><div className="ml">Win Rate</div><div className={`mv ${wr>=55?'up':''}`}>{wr}%</div><div className="ms">{wins.length}W / {losses.length}L</div></div>
         <div className="met"><div className="ml">Profit Factor</div><div className={`mv ${parseFloat(pf)>=1.5?'up':''}`}>{pf}</div></div>
-        <div className="met"><div className="ml">Avg Win / Loss</div><div className="mv">₹{aw} <span style={{color:'var(--text3)',fontSize:12}}>/</span> <span className="dn">₹{al}</span></div></div>
+        <div className="met"><div className="ml">Avg Win / Loss</div><div className="mv">{'₹'}{aw} <span style={{color:'var(--text3)',fontSize:12}}>/</span> <span className="dn">{'₹'}{al}</span></div></div>
+      </div>
+
+      <div className="g3" style={{marginBottom:14}}>
+        <div className="met">
+          <div className="ml">Capital in Open Trades</div>
+          <div className="mv" style={{color:'var(--amber)'}}>{'₹'}{Math.round(capitalOpen).toLocaleString('en-IN')}</div>
+          <div className="ms">{open.length} position{open.length!==1?'s':''} · entry × qty</div>
+        </div>
+        <div className="met">
+          <div className="ml">Max Risk (Open)</div>
+          <div className="mv dn">{'₹'}{Math.round(riskOpen).toLocaleString('en-IN')}</div>
+          <div className="ms">if all open SLs hit</div>
+        </div>
+        <div className="met">
+          <div className="ml">Total Capital Deployed</div>
+          <div className="mv">{'₹'}{Math.round(capitalTotal).toLocaleString('en-IN')}</div>
+          <div className="ms">all {trades.length} trades ever</div>
+        </div>
       </div>
 
       <div className="card">
         <div className="ct">
           <span><i className="ti ti-flask"/> Open Trades ({open.length})</span>
-          {open.length > 0 && <span style={{fontSize:11,color:'var(--green)'}}>⚡ Auto-exiting at T1 or SL</span>}
+          {open.length > 0 && <span style={{fontSize:11,color:'var(--green)'}}>⚡ Auto-exits during market hours only</span>}
         </div>
         {open.length === 0
           ? <div style={{color:'var(--text3)',fontSize:12}}>No open trades. Add trades from AI Signals or Market Analysis.</div>
           : <div style={{overflowX:'auto'}}><table>
-              <thead><tr><th>Symbol</th><th>Dir</th><th>Entry</th><th>SL</th><th>T1</th><th>Qty</th><th>Style</th><th>Source</th><th>Status</th><th>Manual Exit</th></tr></thead>
-              <tbody>{open.map(t=>(
-                <tr key={t.id}>
-                  <td><b>{t.sym}</b></td>
-                  <td><span className={`bdg b-${t.dir==='LONG'?'buy':'sell'}`}>{t.dir}</span></td>
-                  <td>₹{t.entry}</td><td className="dn">₹{t.sl}</td><td className="up">₹{t.t1}</td>
-                  <td>{t.qty}</td>
-                  <td><span className={`bdg b-${t.style==='fno'?'fno':'paper'}`} style={{fontSize:10}}>{t.style}</span></td>
-                  <td><span style={{fontSize:10,color:'var(--text3)'}}>{t.source||'manual'}</span></td>
-                  <td><span style={{fontSize:10,color:'var(--amber)'}}>⚡ Auto-exit pending</span></td>
-                  <td>
-                    <button className="btn btn-sm" style={{fontSize:10}} onClick={()=>{
-                      const ep = prompt(`Manual exit price for ${t.sym}:`)
-                      if(ep && !isNaN(ep)) onClose(t.id, parseFloat(ep))
-                    }}>Exit now</button>
-                  </td>
-                </tr>
-              ))}</tbody>
+              <thead><tr><th>Symbol</th><th>Dir</th><th>Entry</th><th>SL</th><th>T1</th><th>Qty</th><th>Capital Used</th><th>Max Risk</th><th>Style</th><th>Source</th><th>Exit</th><th>Delete</th></tr></thead>
+              <tbody>{open.map(t=>{
+                const capital = Math.round((parseFloat(t.entry)||0)*(parseInt(t.qty)||0))
+                const risk    = Math.round(Math.abs((parseFloat(t.entry)||0)-(parseFloat(t.sl)||0))*(parseInt(t.qty)||0))
+                return (
+                  <tr key={t.id}>
+                    <td><b>{t.sym}</b></td>
+                    <td><span className={`bdg b-${t.dir==='LONG'?'buy':'sell'}`}>{t.dir}</span></td>
+                    <td>{'₹'}{t.entry}</td><td className="dn">{'₹'}{t.sl}</td><td className="up">{'₹'}{t.t1}</td>
+                    <td>{t.qty}</td>
+                    <td style={{color:'var(--amber)',fontWeight:500}}>{'₹'}{capital.toLocaleString('en-IN')}</td>
+                    <td className="dn">{'₹'}{risk.toLocaleString('en-IN')}</td>
+                    <td><span className={`bdg b-${t.style==='fno'?'fno':'paper'}`} style={{fontSize:10}}>{t.style}</span></td>
+                    <td><span style={{fontSize:10,color:'var(--text3)'}}>{t.source||'manual'}</span></td>
+                    <td style={{display:'flex',gap:4}}>
+                      <button className="btn btn-sm" style={{fontSize:10}} onClick={()=>{
+                        const ep = prompt(`Manual exit price for ${t.sym}:`)
+                        if(ep && !isNaN(ep)) onClose(t.id, parseFloat(ep))
+                      }}>Exit</button>
+                    </td>
+                    <td>
+                      <button className="btn btn-sm"
+                        style={{fontSize:10,background:confirmDel===t.id?'var(--rb)':'transparent',color:confirmDel===t.id?'var(--red)':'var(--text3)',border:confirmDel===t.id?'1px solid var(--red)':'' }}
+                        onClick={()=>handleDelete(t.id)}>
+                        {confirmDel===t.id?'⚠ Confirm?':' 🗑'}
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}</tbody>
             </table></div>
         }
       </div>
 
       <div className="card">
-        <div className="ct"><span><i className="ti ti-history"/> Closed Trades ({closed.length})</span></div>
+        <div className="ct">
+          <span><i className="ti ti-history"/> Closed Trades ({closed.length})</span>
+          {closed.length > 0 && (
+            <button className="btn btn-sm" style={{fontSize:10,color:'var(--red)'}}
+              onClick={()=>{ if(window.confirm('Delete ALL closed trades? This cannot be undone.')) closed.forEach(t=>onDelete(t.id)) }}>
+              🗑 Clear all closed
+            </button>
+          )}
+        </div>
         {closed.length === 0
           ? <div style={{color:'var(--text3)',fontSize:12}}>No closed trades yet.</div>
           : <div style={{overflowX:'auto'}}><table>
-              <thead><tr><th>Symbol</th><th>Dir</th><th>Entry</th><th>Exit</th><th>P&L</th><th>Style</th><th>Type</th><th>Result</th><th>Exit By</th><th>Date</th></tr></thead>
-              <tbody>{closed.slice(0,50).map(t=>(
-                <tr key={t.id}>
-                  <td><b>{t.sym}</b></td>
-                  <td><span className={`bdg b-${t.dir==='LONG'?'buy':'sell'}`}>{t.dir}</span></td>
-                  <td>₹{t.entry}</td>
-                  <td>{t.exitP?'₹'+t.exitP:'—'}</td>
-                  <td className={(t.pnl||0)>=0?'up':'dn'}>{(t.pnl||0)>=0?'+':''}₹{Math.abs(t.pnl||0).toLocaleString('en-IN')}</td>
-                  <td><span className={`bdg b-${t.style==='fno'?'fno':'paper'}`} style={{fontSize:10}}>{t.style}</span></td>
-                  <td><span className="bdg" style={{fontSize:10,background:t.tradeType==='live'?'var(--ab)':'var(--bb)',color:t.tradeType==='live'?'var(--at)':'var(--bt)'}}>{t.tradeType==='live'?'LIVE':'PAPER'}</span></td>
-                  <td><span className={`bdg b-${t.result==='WIN'?'win':'loss'}`}>{t.result}</span></td>
-                  <td><span style={{fontSize:10,color:t.autoExit?'var(--green)':'var(--text3)'}}>{t.autoExit?'⚡ Auto':'👤 Manual'}</span></td>
-                  <td style={{fontSize:11,color:'var(--text3)'}}>{t.closedAt?new Date(t.closedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):'—'}</td>
-                </tr>
-              ))}</tbody>
+              <thead><tr><th>Symbol</th><th>Dir</th><th>Entry</th><th>Exit</th><th>Qty</th><th>Capital Used</th><th>P&L</th><th>Style</th><th>Type</th><th>Result</th><th>Exit By</th><th>Date</th><th>Delete</th></tr></thead>
+              <tbody>{closed.slice(0,100).map(t=>{
+                const capital = Math.round((parseFloat(t.entry)||0)*(parseInt(t.qty)||0))
+                return (
+                  <tr key={t.id}>
+                    <td><b>{t.sym}</b></td>
+                    <td><span className={`bdg b-${t.dir==='LONG'?'buy':'sell'}`}>{t.dir}</span></td>
+                    <td>{'₹'}{t.entry}</td>
+                    <td>{t.exitP?'₹'+t.exitP:'—'}</td>
+                    <td>{t.qty}</td>
+                    <td style={{color:'var(--text2)'}}>{'₹'}{capital.toLocaleString('en-IN')}</td>
+                    <td className={(t.pnl||0)>=0?'up':'dn'}>{(t.pnl||0)>=0?'+':''}{'₹'}{Math.abs(t.pnl||0).toLocaleString('en-IN')}</td>
+                    <td><span className={`bdg b-${t.style==='fno'?'fno':'paper'}`} style={{fontSize:10}}>{t.style}</span></td>
+                    <td><span className="bdg" style={{fontSize:10,background:t.tradeType==='live'?'var(--ab)':'var(--bb)',color:t.tradeType==='live'?'var(--at)':'var(--bt)'}}>{t.tradeType==='live'?'LIVE':'PAPER'}</span></td>
+                    <td><span className={`bdg b-${t.result==='WIN'?'win':'loss'}`}>{t.result}</span></td>
+                    <td><span style={{fontSize:10,color:t.autoExit?'var(--green)':'var(--text3)'}}>{t.autoExit?'⚡ Auto':'👤 Manual'}</span></td>
+                    <td style={{fontSize:11,color:'var(--text3)'}}>{t.closedAt?new Date(t.closedAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):'—'}</td>
+                    <td>
+                      <button className="btn btn-sm"
+                        style={{fontSize:10,background:confirmDel===t.id?'var(--rb)':'transparent',color:confirmDel===t.id?'var(--red)':'var(--text3)',border:confirmDel===t.id?'1px solid var(--red)':'' }}
+                        onClick={()=>handleDelete(t.id)}>
+                        {confirmDel===t.id?'⚠ Confirm?':' 🗑'}
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}</tbody>
             </table></div>
         }
       </div>
     </>
   )
 }
-
 function ManualTradeTab({ onOpen }) {
   const [form, setForm] = useState({sym:'',style:'swing',dir:'LONG',qty:50,entry:'',sl:'',t1:'',t2:''})
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
@@ -318,7 +377,7 @@ function StyleBotTab({ style, onOpen, trades }) {
   )
 }
 
-export default function PaperTrades({ creds, trades, onOpen, onClose }) {
+export default function PaperTrades({ creds, trades, onOpen, onClose, onDelete }) {
   const [tab, setTab] = useState('overview')
   const tabs = [
     ['overview','Overview'],['manual','Manual Entry'],['ai','AI Analysis'],
@@ -335,7 +394,7 @@ export default function PaperTrades({ creds, trades, onOpen, onClose }) {
           <div key={id} className={`tab${tab===id?' on':''}`} onClick={()=>setTab(id)}>{label}</div>
         ))}
       </div>
-      {tab==='overview'  && <OverviewTab trades={trades} onClose={onClose}/>}
+      {tab==='overview'  && <OverviewTab trades={trades} onClose={onClose} onDelete={onDelete}/>}
       {tab==='manual'    && <ManualTradeTab onOpen={onOpen}/>}
       {tab==='ai'        && <AITradeTab creds={creds} onOpen={onOpen}/>}
       {(tab==='swing'||tab==='intraday'||tab==='fno') && <StyleBotTab style={tab} onOpen={onOpen} trades={trades}/>}
