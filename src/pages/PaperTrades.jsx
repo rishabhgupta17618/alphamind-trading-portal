@@ -66,6 +66,7 @@ function OverviewTab({ trades, onClose, onDelete }) {
   const capitalOpen  = open.reduce((s,t)=>s+(parseFloat(t.entry)||0)*(parseInt(t.qty)||0),0)
   const capitalTotal = trades.reduce((s,t)=>s+(parseFloat(t.entry)||0)*(parseInt(t.qty)||0),0)
   const riskOpen     = open.reduce((s,t)=>s+Math.abs((parseFloat(t.entry)||0)-(parseFloat(t.sl)||0))*(parseInt(t.qty)||0),0)
+  const profitOpen   = open.reduce((s,t)=>s+Math.abs((parseFloat(t.t1)||0)-(parseFloat(t.entry)||0))*(parseInt(t.qty)||0),0)
 
   const [confirmDel, setConfirmDel] = React.useState(null)
   const handleDelete = (id) => {
@@ -82,7 +83,7 @@ function OverviewTab({ trades, onClose, onDelete }) {
         <div className="met"><div className="ml">Avg Win / Loss</div><div className="mv">{'₹'}{aw} <span style={{color:'var(--text3)',fontSize:12}}>/</span> <span className="dn">{'₹'}{al}</span></div></div>
       </div>
 
-      <div className="g3" style={{marginBottom:14}}>
+      <div className="g4" style={{marginBottom:14}}>
         <div className="met">
           <div className="ml">Capital in Open Trades</div>
           <div className="mv" style={{color:'var(--amber)'}}>{'₹'}{Math.round(capitalOpen).toLocaleString('en-IN')}</div>
@@ -92,6 +93,11 @@ function OverviewTab({ trades, onClose, onDelete }) {
           <div className="ml">Max Risk (Open)</div>
           <div className="mv dn">{'₹'}{Math.round(riskOpen).toLocaleString('en-IN')}</div>
           <div className="ms">if all open SLs hit</div>
+        </div>
+        <div className="met">
+          <div className="ml">Max Profit (Open)</div>
+          <div className="mv up">{'₹'}{Math.round(profitOpen).toLocaleString('en-IN')}</div>
+          <div className="ms">if all open T1s hit</div>
         </div>
         <div className="met">
           <div className="ml">Total Capital Deployed</div>
